@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 
+
 # 工具函数，用于修改目录，可以复用
 @contextlib.contextmanager
 def chdir(path):
@@ -24,7 +25,7 @@ class DirscanGUI:
     FILTERD = [".jpg", ".png", ".gif", ".css", ".svg", ".js", ".py"]
     TARGET = "http://rarara.cn/"
     THREADS = 10
-    PATH = 'D:\\Py0401\\try1st\\A-Tool-HomeWork\\admin'  # 似乎得是本地的路径
+    PATH = 'D:\\Py0401\\try1st\\A-Tool-HomeWork\\test\\'  # 似乎得是本地的路径
 
     def __init__(self):
         self.window = tk.Tk()
@@ -46,6 +47,11 @@ class DirscanGUI:
         self.run_button = tk.Button(self.window, text="Run", command=self.run_dirscan)
         self.run_button.grid(row=1, column=1, padx=5, pady=5)
 
+        # 添加结果文本框
+        self.result_text = tk.Text(self.window, width=80, height=20)
+        self.result_text.grid(row=2, column=0, columnspan=3, padx=5, pady=5)
+        self.result_text.config(state=tk.DISABLED)
+
         self.window.mainloop()
 
     # 浏览文件夹并将路径显示在输入框中
@@ -66,9 +72,25 @@ class DirscanGUI:
         else:
             # 修改目录
             with chdir(path):
+                # self.window.after_idle(lambda: self.gather_paths())
                 self.gather_paths()
+
+            tk.messagebox.showinfo("Information", "start")
+            self.result_text.config(state=tk.NORMAL)  # 设置为可写
+            self.result_text.insert(tk.END, "start.\n")
+            self.result_text.config(state=tk.DISABLED)  # 设置为只读
+
             self.run()
-            tk.messagebox.showinfo("Information", "Done.")
+            tk.messagebox.showinfo("Information", "Done")
+            self.result_text.config(state=tk.NORMAL)  # 设置为可写
+            self.result_text.insert(tk.END, "Done.\n")
+            self.result_text.config(state=tk.DISABLED)  # 设置为只读
+
+    # 用于将信息输出到GUI页面
+    def insert_result(self, data):
+        self.result_text.config(state=tk.NORMAL)
+        self.result_text.insert(tk.END, f'{data}\n')
+        self.result_text.config(state=tk.DISABLED)
 
     # 收集目录信息的函数
     def gather_paths(self):
@@ -86,6 +108,8 @@ class DirscanGUI:
                             if fname != 'wrapper.txt':  # 排除文件本身
                                 f.write(relative_path + "\n")
                         print("writing " + path)
+                        self.insert_result('writing'+path)
+                        # self.window.after_idle(lambda: self.result_text.insert(tk.END, f'writing + {path}'))
                     else:
                         print("you cannot write")
                         continue
@@ -107,13 +131,15 @@ class DirscanGUI:
             url = f'{self.TARGET}{path}'
             time.sleep(0.1)
 
-            req = requests.get(url)
             try:
+                req = requests.get(url)
                 if req.status_code == 200:
                     self.answers.put(url)
                     sys.stdout.write("\n[+]")
                     print(url)
+                    self.window.after_idle(self.insert_result, '\n[+]'+url)
             except Exception as e:
+                print(f'[!] Error occurred while requesting {url}: {e}')
                 raise e
             sys.stdout.flush()
 
